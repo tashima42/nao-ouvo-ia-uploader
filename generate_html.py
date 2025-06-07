@@ -1,7 +1,6 @@
 import xml.etree.ElementTree as ET
-import re
-import unicodedata
 import urllib.parse
+from slug import create_slug
 
 tree = ET.parse('feed.xml')
 root = tree.getroot()
@@ -41,12 +40,6 @@ episode_block = """
     </audio>
 </div>
 """
-
-def create_slug(text):
-    normalized = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode()
-    cleaned = re.sub(r'[^a-zA-Z0-9]+', '-', normalized)
-    slug = cleaned.strip('-').lower()
-    return slug
 
 episodes = []
 

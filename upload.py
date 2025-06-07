@@ -1,13 +1,11 @@
 import xml.etree.ElementTree as ET
-import sys
 import os
 from internetarchive import upload
 from datetime import datetime
-import re
-import unicodedata
-import json
 import argparse
-from filelock import Timeout, FileLock
+from filelock import FileLock
+from slug import create_slug
+from episodes_file import save_episodes, read_episodes
 
 parser = argparse.ArgumentParser(description="Nao Ouvo Internet Archive upload CLI")
 
@@ -34,7 +32,7 @@ items = root[0].findall("item")
 
 lock = FileLock(lock_path, timeout=5)
 
-def match(items):
+def upload_episodes(items):
     for item in items:
         title = item.find("title").text
         description = item.find("description").text
@@ -57,7 +55,7 @@ def match(items):
 
         lock.acquire()
         try:
-            episodes = read_episodes()
+            episodes = read_episodes(episodes_path)
         finally:
             lock.release()
        
@@ -67,9 +65,9 @@ def match(items):
 
         lock.acquire()
         try:
-            episodes = read_episodes()
+            episodes = read_episodes(episodes_path)
             episodes["uploading"].append(slug)
-            save_episodes(episodes)
+            save_episodes(episodes_path, episodes)
         finally:
             lock.release()
 
@@ -98,28 +96,23 @@ def match(items):
 
             lock.acquire()
             try:
-                episodes = read_episodes()
+                episodes = read_episodes(episodes_path)
                 episodes["failed"].append(slug)
-                save_episodes(episodes)
+                save_episodes(episodes_path, episodes)
             finally:
                 lock.release()
 
         lock.acquire()
         try:
-            episodes = read_episodes()
+            episodes = read_episodes(episodes_path)
             episodes["uploaded"].append(slug)
             episodes["uploading"].remove(slug)
             print("uploaded: " + slug)
-            save_episodes(episodes)
+            save_episodes(episodes_path, episodes)
         finally:
             lock.release()
 
 
-def create_slug(text):
-    normalized = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode()
-    cleaned = re.sub(r'[^a-zA-Z0-9]+', '-', normalized)
-    slug = cleaned.strip('-').lower()
-    return slug
 
 
 def format_date(date):
@@ -127,21 +120,8 @@ def format_date(date):
     formatted_date = dt.strftime("%Y-%m-%d")
     return formatted_date
 
-def read_episodes():
-    if os.stat(episodes_path).st_size == 0:
-        print("Error: JSON file is empty.")
-        exit(1)
-
-    with open(episodes_path, "r", encoding="utf-8") as f:
-        eps = json.load(f)
-    return eps
-
-def save_episodes(episodes):
-    with open(episodes_path, "w", encoding="utf-8") as f:
-        json.dump(episodes, f, indent=2, ensure_ascii=False)
-
 def ia_upload(slug, upload_file, md):
     r = upload(slug, files=[upload_file], metadata=md, access_key = access_key, secret_key = secret_key)
     return r
 
-match(items)
+upload_episodes(items)
