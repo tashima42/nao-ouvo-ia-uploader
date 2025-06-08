@@ -1,4 +1,3 @@
-import xml.etree.ElementTree as ET
 import os
 from internetarchive import upload
 from datetime import datetime
@@ -6,11 +5,13 @@ import argparse
 from filelock import FileLock
 from slug import create_slug
 from episodes_file import save_episodes, read_episodes
+from feed import feed_items, feed_tree
 
 parser = argparse.ArgumentParser(description="Nao Ouvo Internet Archive upload CLI")
 
 parser.add_argument("episodesdir", type=str, help="Episodes directory path")
 parser.add_argument("--episodesfile", required=True, type=str, help="Episode JSON file")
+parser.add_argument("--feedfile", required=True, type=str, help="Feed file")
 parser.add_argument("--lockfile", required=True, type=str, help="Episodes lock file")
 parser.add_argument("--include", nargs="+", default=[], help="Start with slug prefix")
 parser.add_argument("--ignore", nargs="+", default=[], help="Ignore start with slug prefix")
@@ -19,16 +20,13 @@ args = parser.parse_args()
 
 nao_ouvo_dir = args.episodesdir
 episodes_path = args.episodesfile
+feed_path = args.feedfile
 lock_path = args.lockfile
 include = args.include
 ignore = args.ignore
 # load secrets
 access_key = os.getenv("S3_ACCESS_KEY")
 secret_key = os.getenv("S3_SECRET_KEY")
-
-tree = ET.parse('feed.xml')
-root = tree.getroot()
-items = root[0].findall("item")
 
 lock = FileLock(lock_path, timeout=5)
 
@@ -124,4 +122,5 @@ def ia_upload(slug, upload_file, md):
     r = upload(slug, files=[upload_file], metadata=md, access_key = access_key, secret_key = secret_key)
     return r
 
-upload_episodes(items)
+
+upload_episodes(feed_items(feed_tree(feed_path)))
