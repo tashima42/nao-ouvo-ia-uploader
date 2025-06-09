@@ -15,7 +15,9 @@ episodes_path = args.episodesfile
 feed_path = args.feedfile
 
 def update(episodes_path, feed_path):
-    episodes = read_episodes(episodes_path)["expected"]
+    episodes = read_episodes(episodes_path)
+    expected = episodes["expected"]
+    missing = episodes["missing"]
 
     tree = feed_tree(feed_path)
     root = tree.getroot()
@@ -29,7 +31,15 @@ def update(episodes_path, feed_path):
 
         title = title_el.text
         slug = create_slug(title)
-        ex = episodes.get(slug)
+
+        if slug in missing:
+            continue
+
+        ex = expected.get(slug)
+
+        if ex is None:
+            print("episode file not found: " , title)
+            exit(1)
 
         enclosure = item.find("enclosure")
 
