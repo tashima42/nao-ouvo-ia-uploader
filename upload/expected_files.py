@@ -18,7 +18,11 @@ def generate_expected(episodes_path, nao_ouvo_dir):
 
     files = os.listdir(nao_ouvo_dir)
     for file in files:
-        title = file.split(".mp3")[0]
+        file_split = file.split(".mp3")
+        if len(file_split) != 2:
+            print("failed split: ", file)
+            exit(1)
+        title = file_split[0]
         expected_episodes[create_slug(title)] = file
     episodes = read_episodes(episodes_path)
 
